@@ -1,0 +1,10 @@
+node_modules
+dist
+.git
+.env
+.env.*
+.manus-logs
+*.manus-starter-*
+.env.example
+work/
+outputs/
