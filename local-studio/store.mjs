@@ -51,7 +51,7 @@ export function createProject(state, input) {
   const project = {
     id: randomUUID(), title, format: input.format === '16:9' ? '16:9' : '9:16',
     style: cleanText(input.style || '', 2000), idea: cleanText(input.idea || '', 10000),
-    characters: [], episodes: [], assets: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    characters: [], scenes: [], episodes: [], assets: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
   };
   state.projects.unshift(project);
   return project;
@@ -61,7 +61,8 @@ export function addEpisode(project, input) {
   const episode = {
     id: randomUUID(), number: project.episodes.length + 1,
     title: cleanText(input.title || `第 ${project.episodes.length + 1} 集`, 160),
-    script: cleanText(input.script || '', 100000), shots: [],
+    script: cleanText(input.script || '', 100000), scriptConfirmed: false, storyboardConfirmed: false,
+    shots: [], captions: [], musicAssetId: null,
   };
   project.episodes.push(episode);
   project.updatedAt = new Date().toISOString();
@@ -81,7 +82,7 @@ export function addShot(project, episode, input) {
     id: randomUUID(), number: episode.shots.length + 1,
     description: cleanText(input.description || '', 2000), dialogue: cleanText(input.dialogue || '', 500),
     videoPrompt: cleanText(input.videoPrompt || '', 5000), duration,
-    assetId: input.assetId || null,
+    assetId: input.assetId || null, sourceStart: 0, voiceAssetId: null,
   };
   episode.shots.push(shot);
   project.updatedAt = new Date().toISOString();

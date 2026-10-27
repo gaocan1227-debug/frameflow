@@ -29,5 +29,24 @@ test('FFmpeg 导出可解码的 MP4', async t => {
   const info = await mediaInfo(path.join(root, 'exports', result.file));
   assert.ok(info.streams.some(stream => stream.codec_type === 'video'));
   assert.ok(info.streams.some(stream => stream.codec_type === 'audio'));
+  const audio = path.join(root, 'assets', 'voice.wav');
+  const tone = spawnSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=1', '-c:a', 'pcm_s16le', audio], { encoding: 'utf8' });
+  assert.equal(tone.status, 0, tone.stderr);
+  project.assets.push({ id: 'voice', kind: 'audio', mime: 'audio/wav', name: 'voice.wav', file: 'voice.wav' });
+  episode.shots[0].voiceAssetId = 'voice'; episode.musicAssetId = 'voice';
+  episode.captions.push({ id: 'caption', start: 0, end: 0.8, text: '测试字幕' });
+  const mixed = await renderEpisode(project, episode);
+  assert.ok((await mediaInfo(path.join(root, 'exports', mixed.file))).streams.some(stream => stream.codec_type === 'audio'));
+});
+test('已有视频可按入点裁剪并保留原声', async t => {
+  if (spawnSync('ffmpeg', ['-version']).status !== 0) return t.skip('FFmpeg unavailable');
+  const source = path.join(root, 'assets', 'source.mp4');
+  const gen = spawnSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'color=c=blue:s=320x480:d=3', '-f', 'lavfi', '-i', 'sine=frequency=660:duration=3', '-shortest', '-c:v', 'libx264', '-c:a', 'aac', source], { encoding: 'utf8' });
+  assert.equal(gen.status, 0, gen.stderr);
+  const state = loadState(), project = state.projects[0], episode = state.projects[0].episodes[0];
+  project.assets.push({ id: 'video', kind: 'video', mime: 'video/mp4', name: 'source.mp4', file: 'source.mp4' });
+  episode.shots[0].assetId = 'video'; episode.shots[0].sourceStart = 1;
+  const result = await renderEpisode(project, episode);
+  assert.ok(result.duration > 0.8 && result.duration < 1.3);
 });
 test.after(() => fs.rmSync(root, { recursive: true, force: true }));

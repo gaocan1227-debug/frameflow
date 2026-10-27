@@ -65,6 +65,19 @@ export const server = createServer(async (req, res) => {
       if (input.format) project.format = input.format === '16:9' ? '16:9' : '9:16';
       touch(project); return project;
     }));
+    if (['characters', 'scenes'].includes(parts[3]) && req.method === 'POST' && parts.length === 4) return json(res, 201, mutate(state => {
+      const project = getProject(state, projectId), kind = parts[3];
+      const name = cleanText(input.name || '', 160);
+      if (!name) throw Object.assign(Error('请填写名称'), { status: 400 });
+      const item = { id: randomUUID(), name, description: cleanText(input.description || '', 3000), referencePrompt: cleanText(input.referencePrompt || '', 5000) };
+      (project[kind] ||= []).push(item); touch(project); return item;
+    }));
+    if (['characters', 'scenes'].includes(parts[3]) && req.method === 'PATCH' && parts.length === 5) return json(res, 200, mutate(state => {
+      const project = getProject(state, projectId), item = (project[parts[3]] || []).find(value => value.id === parts[4]);
+      if (!item) throw Object.assign(Error('条目不存在'), { status: 404 });
+      for (const key of ['name', 'description', 'referencePrompt']) if (key in input) item[key] = cleanText(input[key], key === 'name' ? 160 : 5000);
+      touch(project); return item;
+    }));
     if (req.method === 'POST' && parts[3] === 'episodes' && parts.length === 4) return json(res, 201, mutate(state => addEpisode(getProject(state, projectId), input)));
     if (req.method === 'POST' && parts[3] === 'novel' && parts.length === 4) return json(res, 201, mutate(state => {
       const project = getProject(state, projectId);
@@ -76,7 +89,21 @@ export const server = createServer(async (req, res) => {
       const project = getProject(state, projectId), episode = getEpisode(project, parts[4]);
       if ('title' in input) episode.title = cleanText(input.title, 160);
       if ('script' in input) episode.script = cleanText(input.script, 100000);
+      if ('scriptConfirmed' in input) episode.scriptConfirmed = !!input.scriptConfirmed;
+      if ('storyboardConfirmed' in input) episode.storyboardConfirmed = !!input.storyboardConfirmed;
+      if ('musicAssetId' in input) {
+        if (input.musicAssetId && !project.assets.some(asset => asset.id === input.musicAssetId && asset.kind === 'audio')) throw Object.assign(Error('请选择此项目的音频素材'), { status: 400 });
+        episode.musicAssetId = input.musicAssetId || null;
+      }
       touch(project); return episode;
+    }));
+    if (req.method === 'POST' && parts[3] === 'episodes' && parts[5] === 'captions' && parts.length === 6) return json(res, 201, mutate(state => {
+      const project = getProject(state, projectId), episode = getEpisode(project, parts[4]);
+      const start = Number(input.start), end = Number(input.end);
+      if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || end <= start) throw Object.assign(Error('字幕起止时间无效'), { status: 400 });
+      const caption = { id: randomUUID(), start, end, text: cleanText(input.text || '', 500) };
+      if (!caption.text) throw Object.assign(Error('字幕不能为空'), { status: 400 });
+      (episode.captions ||= []).push(caption); touch(project); return caption;
     }));
     if (req.method === 'POST' && parts[3] === 'episodes' && parts[5] === 'shots' && parts.length === 6) return json(res, 201, mutate(state => {
       const project = getProject(state, projectId); return addShot(project, getEpisode(project, parts[4]), input);
@@ -90,6 +117,15 @@ export const server = createServer(async (req, res) => {
         const duration = Number(input.duration);
         if (!Number.isFinite(duration) || duration < 1 || duration > 30) throw Object.assign(Error('镜头时长须为 1–30 秒'), { status: 400 });
         shot.duration = duration;
+      }
+      if ('sourceStart' in input) {
+        const value = Number(input.sourceStart);
+        if (!Number.isFinite(value) || value < 0) throw Object.assign(Error('素材入点不能小于 0'), { status: 400 });
+        shot.sourceStart = value;
+      }
+      if ('voiceAssetId' in input) {
+        if (input.voiceAssetId && !project.assets.some(asset => asset.id === input.voiceAssetId && asset.kind === 'audio')) throw Object.assign(Error('请选择此项目的音频素材'), { status: 400 });
+        shot.voiceAssetId = input.voiceAssetId || null;
       }
       if ('assetId' in input) {
         if (input.assetId && !project.assets.some(asset => asset.id === input.assetId)) throw Object.assign(Error('素材不属于此项目'), { status: 400 });
