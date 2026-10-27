@@ -1,0 +1,33 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+const root = fs.mkdtempSync(path.join(os.tmpdir(), 'frameflow-test-'));
+process.env.FRAMEFLOW_DATA_DIR = root;
+const { loadState, mutate, createProject, addEpisode, addShot, splitChapters } = await import('../store.mjs');
+const { renderEpisode, mediaInfo } = await import('../render.mjs');
+test('项目、章节与镜头可持久化', () => {
+  const chapters = splitChapters('第一章 开始\n故事一\n第二章 继续\n故事二');
+  assert.equal(chapters.length, 2);
+  const project = mutate(state => createProject(state, { title: '锈蚀之巅', format: '9:16' }));
+  mutate(state => { const p = state.projects[0]; const e = addEpisode(p, { title: chapters[0].title, script: chapters[0].text }); addShot(p, e, { duration: 1, dialogue: '清晨。' }); });
+  assert.equal(loadState().projects[0].episodes[0].shots.length, 1);
+  assert.equal(project.title, '锈蚀之巅');
+});
+test('FFmpeg 导出可解码的 MP4', async t => {
+  if (spawnSync('ffmpeg', ['-version']).status !== 0 || spawnSync('ffprobe', ['-version']).status !== 0) return t.skip('FFmpeg unavailable');
+  const image = path.join(root, 'assets', 'test.png');
+  const gen = spawnSync('ffmpeg', ['-y', '-f', 'lavfi', '-i', 'color=c=red:s=320x480:d=1', '-frames:v', '1', '-update', '1', image], { encoding: 'utf8' });
+  assert.equal(gen.status, 0, gen.stderr);
+  const state = loadState(), project = state.projects[0], episode = project.episodes[0];
+  const asset = { id: 'test', kind: 'image', mime: 'image/png', name: 'test.png', file: 'test.png' };
+  project.assets.push(asset); episode.shots[0].assetId = asset.id;
+  const result = await renderEpisode(project, episode);
+  assert.ok(result.duration > 0.8 && result.duration < 1.3);
+  const info = await mediaInfo(path.join(root, 'exports', result.file));
+  assert.ok(info.streams.some(stream => stream.codec_type === 'video'));
+  assert.ok(info.streams.some(stream => stream.codec_type === 'audio'));
+});
+test.after(() => fs.rmSync(root, { recursive: true, force: true }));

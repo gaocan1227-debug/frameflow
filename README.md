@@ -1,49 +1,29 @@
-# 帧序 FrameFlow
+# 帧序 · 开源本机版
 
-短剧创作工作台。前端使用 React、Vite 和 tRPC，服务端使用 Express、Drizzle 和 MySQL。项目可保存创作草稿、生成分集方案、记录版本与点数；登录、模型生成和订阅功能依赖外部服务。
+无需账号、积分、订阅、数据库服务或云端 API 的短剧／漫剧制作工作台。源码采用 MIT 许可。项目、上传素材与导出视频仅保存在本机 `data/`。
 
-## 本地准备
+## 运行
 
-- Node.js 22，pnpm 10.18.0
-- MySQL 数据库
-- Manus 项目及其 OAuth、API 配置；没有这些配置时无法登录或生成内容
-- 订阅功能另需 Stripe 密钥和 webhook
+1. 安装 Node.js 20 或更新版本，以及带 `libx264`、`libass` 的 FFmpeg／FFprobe。
+2. 在仓库目录执行 `npm start`。
+3. 打开终端显示的 `http://127.0.0.1:3000`。
 
-```bash
-corepack enable
-corepack prepare pnpm@10.18.0 --activate
-pnpm install --frozen-lockfile
-cp .env.example .env
-# 在 .env 中填写自己的配置，不要提交该文件
-pnpm db:migrate
-pnpm dev
-```
+可用环境变量：`PORT`、`FRAMEFLOW_DATA_DIR`、`FFMPEG_BIN`、`FFPROBE_BIN`。数据目录请自行备份；`data/` 已被 Git 忽略。
 
-访问 `http://localhost:3000`。`GET /api/health` 可检查服务进程。首次迁移前需创建数据库并填写 `DATABASE_URL`。
+## 当前功能
 
-## 验证与构建
+- 创建本机项目，设置竖屏／横屏画幅、故事梗概和视觉方向。
+- 粘贴小说，按章节标题拆分剧集；也可手动编写剧本。
+- 编排镜头、对白字幕、画面描述和视频提示词。
+- 上传 PNG、JPEG、WebP、MP4 素材并绑定镜头。
+- 使用 FFmpeg 将素材按镜头顺序合成为带字幕的 MP4，检查音视频轨与时长。
 
-```bash
-pnpm check
-pnpm test
-pnpm build
-pnpm start
-```
+视频导出使用静止图片或已有视频。此版本没有内置 AI 生图、生视频、配音服务；外部供应商的费用和授权由使用者自行负责。当前导出为静音音轨，没有配音和音乐混音。
 
-`pnpm build` 输出服务端文件到 `dist/`，静态页面到 `dist/public/`。生产环境请使用 HTTPS，并在服务端配置环境变量，不能把密钥放入 `VITE_` 变量或前端代码。Dockerfile 也使用同一套构建命令。
+## 与原有版本
 
-## 目录
+原仓库 `main` 是 Manus 云端短剧方案站，含 Manus 登录、MySQL、点数与 Stripe。`oss-local` 分支将应用改为本机可运行的源码项目，不依赖这些服务。下载的 GPT 桌面版 DMG 是另一个 Next.js／SQLite／FFmpeg 实现，包内只有编译后的运行文件，因此本分支是按其工作流程重新实现，并非它的原始源码。
 
-| 目录 | 用途 |
-| --- | --- |
-| `client/` | React 页面与公共资源 |
-| `server/` | API、登录、生成与支付逻辑 |
-| `shared/` | 前后端共享类型和常量 |
-| `drizzle/` | 数据库结构和迁移 |
-| `patches/` | pnpm 依赖补丁 |
+## 开发与验证
 
-## 配置与使用边界
-
-`.env.example` 列出所需变量，空值只是占位。Manus 服务、MySQL 和 Stripe 均须使用自己的有效配置，仓库本身不提供这些服务。`MANUS_API_BROWSER_KEY` 是供浏览器使用的公开值，其他服务密钥只应留在服务端。Stripe 结算与 webhook 需要单独配置和验证，页面显示的套餐信息不等于已开通收款。
-
-部署前还应检查对应服务的回调地址、域名和 webhook 地址。项目中有平台专用的登录与存储代码，脱离 Manus 环境部署需要替换这些集成。
+运行 `npm test`。需要 FFmpeg 才能执行视频导出测试。服务仅监听 `127.0.0.1`，不暴露到局域网。
