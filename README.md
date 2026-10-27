@@ -1,49 +1,41 @@
-# 帧序 FrameFlow
+# 帧序 · 开源本机版
 
-短剧创作工作台。前端使用 React、Vite 和 tRPC，服务端使用 Express、Drizzle 和 MySQL。项目可保存创作草稿、生成分集方案、记录版本与点数；登录、模型生成和订阅功能依赖外部服务。
+无需账号、积分、订阅、数据库服务或云端 API 的短剧／漫剧制作工作台。源码采用 MIT 许可。项目、上传素材与导出视频仅保存在本机 `data/`。
 
-## 本地准备
+## 三步开始
 
-- Node.js 22，pnpm 10.18.0
-- MySQL 数据库
-- Manus 项目及其 OAuth、API 配置；没有这些配置时无法登录或生成内容
-- 订阅功能另需 Stripe 密钥和 webhook
-
-```bash
-corepack enable
-corepack prepare pnpm@10.18.0 --activate
-pnpm install --frozen-lockfile
-cp .env.example .env
-# 在 .env 中填写自己的配置，不要提交该文件
-pnpm db:migrate
-pnpm dev
-```
-
-访问 `http://localhost:3000`。`GET /api/health` 可检查服务进程。首次迁移前需创建数据库并填写 `DATABASE_URL`。
-
-## 验证与构建
+1. 安装 Node.js 20 或更新版本，以及带 `libx264`、`libass` 的 FFmpeg／FFprobe。
+2. 下载本仓库的 `oss-local` 分支，进入目录并执行 `npm start`。本项目没有 npm 依赖，无需先运行 `npm install`。
+3. 在浏览器打开 `http://127.0.0.1:3000`，点击“＋ 新建”。
 
 ```bash
-pnpm check
-pnpm test
-pnpm build
-pnpm start
+git clone --branch oss-local https://github.com/gaocan1227-debug/frameflow.git
+cd frameflow
+node --version
+ffmpeg -version
+ffprobe -version
+npm start
 ```
 
-`pnpm build` 输出服务端文件到 `dist/`，静态页面到 `dist/public/`。生产环境请使用 HTTPS，并在服务端配置环境变量，不能把密钥放入 `VITE_` 变量或前端代码。Dockerfile 也使用同一套构建命令。
+**首次使用、小说导入、素材上传、逐镜配音、字幕和 MP4 导出的完整操作**见 [使用指南](docs/使用指南.md)。本分支提供的是源码和本机网页，不是下载的 GPT 版 DMG 安装包。
 
-## 目录
+可用环境变量：`PORT`、`FRAMEFLOW_DATA_DIR`、`FFMPEG_BIN`、`FFPROBE_BIN`。数据目录请自行备份；`data/` 已被 Git 忽略。
 
-| 目录 | 用途 |
-| --- | --- |
-| `client/` | React 页面与公共资源 |
-| `server/` | API、登录、生成与支付逻辑 |
-| `shared/` | 前后端共享类型和常量 |
-| `drizzle/` | 数据库结构和迁移 |
-| `patches/` | pnpm 依赖补丁 |
+## 当前功能
 
-## 配置与使用边界
+- 创建本机项目，设置竖屏／横屏画幅、故事梗概和视觉方向。
+- 粘贴小说，按章节标题拆分剧集；也可手动编写剧本。
+- 维护全剧人物和场景资料、参考图提示词，确认剧本与分镜。
+- 编排镜头、画面描述和视频提示词；设置时长、素材入点和逐镜配音。
+- 上传 PNG、JPEG、WebP、MP4、MP3、WAV 素材并绑定镜头。
+- 编辑字幕轨及背景音乐，使用 FFmpeg 将素材按镜头顺序合成为 MP4，检查音视频轨与时长。
 
-`.env.example` 列出所需变量，空值只是占位。Manus 服务、MySQL 和 Stripe 均须使用自己的有效配置，仓库本身不提供这些服务。`MANUS_API_BROWSER_KEY` 是供浏览器使用的公开值，其他服务密钥只应留在服务端。Stripe 结算与 webhook 需要单独配置和验证，页面显示的套餐信息不等于已开通收款。
+视频导出使用静止图片或已有视频；可混合上传的配音与配乐。此版本没有内置 AI 生图、生视频、TTS 或小说自动改编服务，上传的音频需由使用者自行准备。外部供应商的费用和授权由使用者自行负责。
 
-部署前还应检查对应服务的回调地址、域名和 webhook 地址。项目中有平台专用的登录与存储代码，脱离 Manus 环境部署需要替换这些集成。
+## 与原有版本
+
+原仓库 `main` 是 Manus 云端短剧方案站，含 Manus 登录、MySQL、点数与 Stripe。`oss-local` 分支将应用改为本机可运行的源码项目，不依赖这些服务。下载的 GPT 桌面版 DMG 是另一个 Next.js／SQLite／FFmpeg 实现，包内只有编译后的运行文件，因此本分支是按其本机工作流程重新实现，并非它的原始源码或逐项等价替代品。GPT 版的供应商生成、任务恢复和精细剪辑仍未在本分支实现。
+
+## 开发与验证
+
+运行 `npm test`。需要 FFmpeg 才能执行视频导出测试。服务仅监听 `127.0.0.1`，不暴露到局域网。
