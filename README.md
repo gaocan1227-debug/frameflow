@@ -2,11 +2,22 @@
 
 无需账号、积分、订阅、数据库服务或云端 API 的短剧／漫剧制作工作台。源码采用 MIT 许可。项目、上传素材与导出视频仅保存在本机 `data/`。
 
-## 运行
+## 三步开始
 
 1. 安装 Node.js 20 或更新版本，以及带 `libx264`、`libass` 的 FFmpeg／FFprobe。
-2. 在仓库目录执行 `npm start`。
-3. 打开终端显示的 `http://127.0.0.1:3000`。
+2. 下载本仓库的 `oss-local` 分支，进入目录并执行 `npm start`。本项目没有 npm 依赖，无需先运行 `npm install`。
+3. 在浏览器打开 `http://127.0.0.1:3000`，点击“＋ 新建”。
+
+```bash
+git clone --branch oss-local https://github.com/gaocan1227-debug/frameflow.git
+cd frameflow
+node --version
+ffmpeg -version
+ffprobe -version
+npm start
+```
+
+**首次使用、小说导入、素材上传、逐镜配音、字幕和 MP4 导出的完整操作**见 [使用指南](docs/使用指南.md)。本分支提供的是源码和本机网页，不是下载的 GPT 版 DMG 安装包。
 
 可用环境变量：`PORT`、`FRAMEFLOW_DATA_DIR`、`FFMPEG_BIN`、`FFPROBE_BIN`。数据目录请自行备份；`data/` 已被 Git 忽略。
 
